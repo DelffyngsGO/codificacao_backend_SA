@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "express": "^5.2.1",
+    "node": "^25.8.1"
+  },
+  "scripts": {
+    "dev": "node --watch ./src/server.js"
+  }
+}
