@@ -1,7 +1,27 @@
-const key = require('../data/keyBoard.js')
+const kb = require('../data/keyBoard.js')
 
-const getAll = () => key
+// Retorna todas as teclas agrupadas por categoria
+const getAll = () => kb
 
-const getById = (id) => key.find(m => m.id === parseInt(id))
+// Retorna todas as teclas em um array flat
+const getAllFlat = () => [
+    ...kb.letters,
+    ...kb.numbers,
+    ...kb.specials
+]
 
-module.exports = { getAll, getById }
+// Busca por ID
+const getById = (id) =>
+    getAllFlat().find(k => k.id === parseInt(id))
+
+// Busca por nome ou símbolo (ex: 'A', 'a', ',')
+const getByName = (name) =>
+    getAllFlat().find(
+        k => k.name.toLowerCase() === name.toLowerCase() ||
+             k.alter === name.toLowerCase()
+    )
+
+// Retorna apenas uma categoria
+const getByCategory = (category) => kb[category] ?? null
+
+module.exports = { getAll, getAllFlat, getById, getByName, getByCategory }
