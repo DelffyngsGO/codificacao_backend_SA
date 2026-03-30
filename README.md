@@ -13,5 +13,13 @@ Implementação do front com dados da API.
 
 Atualização do README.
 
-5º commit - (Em breve)
+5º commit - 30/03/26
+
+Implementação do tailwind
+
+6º commit - 30/03/26
+
+Tentativa de consertar um erro no git
+
+7º commit - (Em breve)
 
