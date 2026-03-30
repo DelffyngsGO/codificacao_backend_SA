@@ -2,39 +2,21 @@ import { useState, useEffect, useRef } from "react"
 
 const API = "http://localhost:3000/kb"
 
-// ─── Estilos globais ───────────────────────────────────────────────────────────
+// ─── Estilos globais (fontes + scanline — não dá pra fazer só com Tailwind) ────
 const GlobalStyle = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg:        #0a0c10;
-      --surface:   #111318;
-      --border:    #1e2230;
-      --key-top:   #1d2235;
-      --key-glow:  #00ffe0;
-      --key-press: #ff4fd8;
-      --text:      #c8d6f0;
-      --muted:     #4a556e;
-      --accent:    #00ffe0;
-      --accent2:   #ff4fd8;
-      --accent3:   #ffe066;
-      --font-mono: 'Share Tech Mono', monospace;
-      --font-ui:   'Rajdhani', sans-serif;
-    }
-    html, body, #root { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-ui); }
     body::after {
-      content: ''; position: fixed; inset: 0;
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
       background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.15) 2px, rgba(0,0,0,.15) 4px);
-      pointer-events: none; z-index: 9999;
     }
     input::placeholder { color: #2e3a50; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(6px) } to { opacity:1; transform: translateY(0) } }
-    @keyframes pulse  { 0%,100% { box-shadow: 0 0 8px var(--accent3) } 50% { box-shadow: 0 0 20px var(--accent3) } }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+    .fade-in { animation: fadeIn .2s ease; }
   `}</style>
 )
 
-// ─── Hook de fetch da API ──────────────────────────────────────────────────────
+// ─── Hook de fetch ─────────────────────────────────────────────────────────────
 function useKeyData(path) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
@@ -55,30 +37,52 @@ function useKeyData(path) {
 function Key({ keyData, highlight, onClick }) {
   const [pressed, setPressed] = useState(false)
   const isWide = ['Tab','CapsLock','Shift','Control','Alt','Backspace','Enter','Space'].includes(keyData.name)
+  const isSpecial = keyData.category === 'special'
 
   function handleClick() {
     setPressed(true); setTimeout(() => setPressed(false), 200); onClick(keyData)
   }
 
+  // larguras fixas via style pois são valores específicos não cobertos pelo Tailwind base
+  const width = isWide
+    ? keyData.name === 'Space' ? 280
+    : ['Backspace','Enter'].includes(keyData.name) ? 100 : 80
+    : 52
+
+  let bg     = 'bg-[#1d2235]'
+  let border = 'border-[#1e2230]'
+  let text   = isSpecial ? 'text-[#4a556e]' : 'text-[#c8d6f0]'
+  let shadow = 'shadow-[0_4px_0_#07080c]'
+
+  if (highlight) {
+    bg     = 'bg-[#00ffe0]'
+    border = 'border-[#00ffe0]'
+    text   = 'text-black'
+    shadow = 'shadow-[0_0_12px_#00ffe0,0_4px_0_#0a0c10]'
+  }
+  if (pressed) {
+    bg     = 'bg-[#ff4fd8]'
+    border = 'border-[#ff4fd8]'
+    text   = 'text-black'
+    shadow = 'shadow-[0_0_12px_#ff4fd8]'
+  }
+
   return (
-    <button onClick={handleClick} style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      width: isWide ? (keyData.name === 'Space' ? 280 : ['Backspace','Enter'].includes(keyData.name) ? 100 : 80) : 52,
-      height: 52,
-      background: pressed ? 'var(--key-press)' : highlight ? 'var(--key-glow)' : 'var(--key-top)',
-      border: `1px solid ${highlight ? 'var(--accent)' : pressed ? 'var(--accent2)' : 'var(--border)'}`,
-      borderRadius: 6,
-      color: pressed || highlight ? '#000' : keyData.category === 'special' ? 'var(--muted)' : 'var(--text)',
-      fontFamily: 'var(--font-mono)', fontSize: isWide ? 11 : 14, fontWeight: 600,
-      cursor: 'pointer', transition: 'all .12s ease',
-      boxShadow: highlight ? '0 0 12px var(--key-glow), 0 4px 0 #0a0c10' : pressed ? '0 0 12px var(--key-press)' : '0 4px 0 #07080c',
-      transform: pressed ? 'translateY(3px)' : 'translateY(0)',
-      outline: 'none', letterSpacing: '.5px', textTransform: 'uppercase', flexShrink: 0,
-    }}>
+    <button
+      onClick={handleClick}
+      style={{ width, height: 52 }}
+      className={`
+        flex flex-col items-center justify-center flex-shrink-0
+        ${bg} border ${border} rounded-md ${text} ${shadow}
+        font-mono text-sm font-semibold tracking-wide uppercase
+        cursor-pointer outline-none transition-all duration-100
+        ${pressed ? 'translate-y-0.5' : 'translate-y-0'}
+      `}
+    >
       {keyData.alter && keyData.alter !== keyData.name.toLowerCase() && (
-        <span style={{ fontSize: 9, opacity: .55, lineHeight: 1 }}>{keyData.alter}</span>
+        <span className="text-[9px] opacity-50 leading-none">{keyData.alter}</span>
       )}
-      <span>{keyData.name}</span>
+      <span className={isWide ? 'text-[11px]' : 'text-sm'}>{keyData.name}</span>
     </button>
   )
 }
@@ -98,9 +102,9 @@ function KeyboardLayout({ allKeys, highlight, onKeyClick }) {
   const isHighlighted = k => highlight && (k.id === highlight.id || k.name === highlight.name)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+    <div className="flex flex-col gap-2 items-center">
       {rows.map((row, ri) => (
-        <div key={ri} style={{ display: 'flex', gap: 6 }}>
+        <div key={ri} className="flex gap-1.5">
           {row.map(name => { const k = byName(name); return k ? <Key key={k.id} keyData={k} highlight={isHighlighted(k)} onClick={onKeyClick} /> : null })}
         </div>
       ))}
@@ -108,47 +112,45 @@ function KeyboardLayout({ allKeys, highlight, onKeyClick }) {
   )
 }
 
-// ─── Card de informações de uma tecla ─────────────────────────────────────────
-function KeyInfo({ data, label, color }) {
-  const c = color || 'var(--accent)'
+// ─── Card de informações ───────────────────────────────────────────────────────
+function KeyInfo({ data, label, accent }) {
+  // accent: 'cyan' | 'yellow'
+  const isCyan   = accent !== 'yellow'
+  const textAccent  = isCyan ? 'text-[#00ffe0]' : 'text-[#ffe066]'
+  const borderAccent = isCyan ? 'border-[#00ffe033]' : 'border-[#ffe06633]'
+  const tagBg    = isCyan ? 'bg-[#00ffe011] border-[#00ffe044]' : 'bg-[#ffe06611] border-[#ffe06644]'
+
   if (!data) return null
   return (
-    <div style={{
-      background: 'var(--surface)', border: `1px solid ${c}44`,
-      borderRadius: 10, padding: '16px 20px', fontFamily: 'var(--font-mono)',
-      fontSize: 13, lineHeight: 2.2, animation: 'fadeIn .2s ease', minWidth: 200,
-    }}>
+    <div className={`fade-in bg-[#111318] border ${borderAccent} rounded-xl p-4 font-mono text-[13px] min-w-[200px]`}>
       {label && (
-        <div style={{ color: c, fontSize: 10, letterSpacing: 3, marginBottom: 8, textTransform: 'uppercase' }}>
-          {label}
-        </div>
+        <div className={`${textAccent} text-[10px] tracking-[3px] uppercase mb-2`}>{label}</div>
       )}
       {data.letters ? (
-        <>
+        <div className="space-y-1.5">
           {[['id', data.id], ['letters', null], ['category', data.category]].map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <span style={{ color: 'var(--muted)', width: 80, flexShrink: 0 }}>{k}</span>
+            <div key={k} className="flex gap-4 items-start">
+              <span className="text-[#4a556e] w-20 shrink-0">{k}</span>
               {k === 'letters'
-                ? <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                ? <div className="flex gap-1.5 flex-wrap">
                     {data.letters.map((l, i) => (
-                      <span key={i} style={{
-                        background: `${c}22`, border: `1px solid ${c}55`,
-                        borderRadius: 4, padding: '1px 7px', color: c, fontSize: 12,
-                      }}>{l}</span>
+                      <span key={i} className={`${tagBg} border rounded px-1.5 py-px ${textAccent} text-[12px]`}>{l}</span>
                     ))}
                   </div>
-                : <span style={{ color: c }}>{String(v)}</span>
+                : <span className={textAccent}>{String(v)}</span>
               }
             </div>
           ))}
-        </>
+        </div>
       ) : (
-        [['id', data.id], ['name', data.name], ['alter', data.alter ?? 'null'], ['category', data.category]].map(([k, v]) => (
-          <div key={k} style={{ display: 'flex', gap: 16 }}>
-            <span style={{ color: 'var(--muted)', width: 80 }}>{k}</span>
-            <span style={{ color: c }}>{String(v)}</span>
-          </div>
-        ))
+        <div className="space-y-1.5">
+          {[['id', data.id], ['name', data.name], ['alter', data.alter ?? 'null'], ['category', data.category]].map(([k, v]) => (
+            <div key={k} className="flex gap-4">
+              <span className="text-[#4a556e] w-20">{k}</span>
+              <span className={textAccent}>{String(v)}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -157,31 +159,27 @@ function KeyInfo({ data, label, color }) {
 // ─── Barra de busca ────────────────────────────────────────────────────────────
 function SearchBar({ value, onChange, onSearch, inputRef }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 8,
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '8px 16px', width: '100%', maxWidth: 520,
-    }}>
-      <span style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: 12, whiteSpace: 'nowrap' }}>
-        localhost:3000/kb
-      </span>
+    <div className="flex items-center gap-2 bg-[#111318] border border-[#1e2230] rounded-lg px-4 py-2 w-full max-w-xl">
+      <span className="text-[#4a556e] font-mono text-xs whitespace-nowrap">localhost:3000/kb</span>
       <input
         ref={inputRef}
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && onSearch()}
         placeholder="/name/A  ou  /1  ou  /category/letters"
-        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: 13 }}
+        className="flex-1 bg-transparent border-none outline-none text-[#00ffe0] font-mono text-[13px]"
       />
-      <button onClick={onSearch} style={{
-        background: 'var(--accent)', border: 'none', borderRadius: 4, padding: '4px 14px',
-        color: '#000', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12, cursor: 'pointer', letterSpacing: 1,
-      }}>GO</button>
+      <button
+        onClick={onSearch}
+        className="bg-[#00ffe0] text-black font-bold text-xs tracking-widest px-3 py-1 rounded cursor-pointer hover:bg-[#00e8cc] transition-colors"
+      >
+        GO
+      </button>
     </div>
   )
 }
 
-// ─── Formulário de criação de entrada customizada ──────────────────────────────
+// ─── Formulário de criação ─────────────────────────────────────────────────────
 function CreateForm({ existingIds, onCreated }) {
   const [id, setId]           = useState('')
   const [letter, setLetter]   = useState('')
@@ -195,8 +193,7 @@ function CreateForm({ existingIds, onCreated }) {
     if (!val) return
     if (letters.includes(val)) { setError('Valor já adicionado'); return }
     setLetters(prev => [...prev, val])
-    setLetter('')
-    setError('')
+    setLetter(''); setError('')
   }
 
   function removeLetter(l) { setLetters(prev => prev.filter(x => x !== l)) }
@@ -204,101 +201,70 @@ function CreateForm({ existingIds, onCreated }) {
   function handleCreate() {
     setError('')
     const numId = parseInt(id)
-    if (!id || isNaN(numId))          { setError('ID deve ser um número'); return }
-    if (existingIds.includes(numId))  { setError(`ID ${numId} já existe na API`); return }
-    if (letters.length === 0)         { setError('Adicione ao menos um valor'); return }
-
+    if (!id || isNaN(numId))         { setError('ID deve ser um número'); return }
+    if (existingIds.includes(numId)) { setError(`ID ${numId} já existe na API`); return }
+    if (letters.length === 0)        { setError('Adicione ao menos um valor'); return }
     onCreated({ id: numId, letters, category })
     setSuccess(true)
     setTimeout(() => setSuccess(false), 2000)
     setId(''); setLetter(''); setLetters([]); setCategory('custom')
   }
 
-  const inputStyle = {
-    width: '100%', background: '#0d1017', border: '1px solid var(--border)',
-    borderRadius: 6, padding: '7px 10px', color: 'var(--accent3)',
-    fontFamily: 'var(--font-mono)', fontSize: 13, outline: 'none',
-    transition: 'border-color .15s',
-  }
+  const inputCls = "w-full bg-[#0d1017] border border-[#1e2230] rounded-md px-2.5 py-1.5 text-[#ffe066] font-mono text-[13px] outline-none focus:border-[#ffe066] transition-colors"
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid #ffe06633',
-      borderRadius: 12, padding: '20px 24px', width: '100%', maxWidth: 520,
-      fontFamily: 'var(--font-mono)', fontSize: 13,
-    }}>
-      <div style={{ color: 'var(--accent3)', fontSize: 10, letterSpacing: 3, marginBottom: 16, textTransform: 'uppercase' }}>
-        + nova entrada customizada
-      </div>
+    <div className="bg-[#111318] border border-[#ffe06622] rounded-xl p-5 w-full max-w-xl font-mono text-[13px]">
+      <div className="text-[#ffe066] text-[10px] tracking-[3px] uppercase mb-4">+ nova entrada customizada</div>
 
       {/* ID + Category */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: '0 0 90px' }}>
-          <div style={{ color: 'var(--muted)', fontSize: 10, marginBottom: 4 }}>ID</div>
-          <input value={id} onChange={e => setId(e.target.value)} placeholder="ex: 99"
-            style={inputStyle}
-            onFocus={e => e.target.style.borderColor = 'var(--accent3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
+      <div className="flex gap-2.5 mb-3">
+        <div className="w-24">
+          <div className="text-[#4a556e] text-[10px] mb-1">ID</div>
+          <input value={id} onChange={e => setId(e.target.value)} placeholder="ex: 99" className={inputCls} />
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: 'var(--muted)', fontSize: 10, marginBottom: 4 }}>CATEGORY</div>
-          <input value={category} onChange={e => setCategory(e.target.value)} placeholder="custom"
-            style={inputStyle}
-            onFocus={e => e.target.style.borderColor = 'var(--accent3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
+        <div className="flex-1">
+          <div className="text-[#4a556e] text-[10px] mb-1">CATEGORY</div>
+          <input value={category} onChange={e => setCategory(e.target.value)} placeholder="custom" className={inputCls} />
         </div>
       </div>
 
-      {/* Campo de letras */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ color: 'var(--muted)', fontSize: 10, marginBottom: 4 }}>LETRAS / VALORES</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* Letras */}
+      <div className="mb-2.5">
+        <div className="text-[#4a556e] text-[10px] mb-1">LETRAS / VALORES</div>
+        <div className="flex gap-2">
           <input
             value={letter}
             onChange={e => setLetter(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addLetter()}
             placeholder="digite e pressione Enter ou +"
-            style={{ ...inputStyle, color: 'var(--text)' }}
-            onFocus={e => e.target.style.borderColor = 'var(--accent3)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            className={`${inputCls} flex-1 text-[#c8d6f0]`}
           />
-          <button onClick={addLetter} style={{
-            background: '#1a1e2a', border: '1px solid #ffe06666', borderRadius: 6,
-            color: 'var(--accent3)', padding: '7px 14px', cursor: 'pointer',
-            fontFamily: 'var(--font-mono)', fontSize: 18, lineHeight: 1,
-          }}>+</button>
+          <button
+            onClick={addLetter}
+            className="bg-[#1a1e2a] border border-[#ffe06666] rounded-md text-[#ffe066] px-3.5 text-lg cursor-pointer hover:bg-[#222840] transition-colors"
+          >+</button>
         </div>
       </div>
 
       {/* Tags */}
       {letters.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div className="flex gap-1.5 flex-wrap mb-3">
           {letters.map((l, i) => (
-            <span key={i} style={{
-              background: '#ffe0661a', border: '1px solid #ffe06655',
-              borderRadius: 4, padding: '2px 10px', color: 'var(--accent3)',
-              fontSize: 12, display: 'flex', alignItems: 'center', gap: 6,
-            }}>
+            <span key={i} className="flex items-center gap-1.5 bg-[#ffe06611] border border-[#ffe06644] rounded px-2.5 py-px text-[#ffe066] text-[12px]">
               {l}
-              <span onClick={() => removeLetter(l)} style={{ cursor: 'pointer', opacity: .6, fontSize: 14 }}>×</span>
+              <span onClick={() => removeLetter(l)} className="cursor-pointer opacity-60 text-sm hover:opacity-100">×</span>
             </span>
           ))}
         </div>
       )}
 
-      {error && <p style={{ color: 'var(--accent2)', fontSize: 11, marginBottom: 10 }}>⚠ {error}</p>}
+      {error && <p className="text-[#ff4fd8] text-[11px] mb-2.5">⚠ {error}</p>}
 
-      <button onClick={handleCreate} style={{
-        width: '100%',
-        background: success ? 'var(--accent3)' : 'transparent',
-        border: '1px solid var(--accent3)', borderRadius: 6,
-        color: success ? '#000' : 'var(--accent3)',
-        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13,
-        letterSpacing: 2, padding: '9px', cursor: 'pointer',
-        transition: 'all .2s', textTransform: 'uppercase',
-      }}>
+      <button
+        onClick={handleCreate}
+        className={`w-full border border-[#ffe066] rounded-md py-2 font-bold text-[13px] tracking-widest uppercase cursor-pointer transition-all duration-200
+          ${success ? 'bg-[#ffe066] text-black' : 'bg-transparent text-[#ffe066] hover:bg-[#ffe06611]'}`}
+      >
         {success ? '✓ criado!' : 'criar entrada'}
       </button>
     </div>
@@ -326,10 +292,10 @@ export default function App() {
   const [customEntries, setCustomEntries]     = useState([])
   const [customResult, setCustomResult]       = useState(null)
   const searchInputRef   = useRef(null)
-  const customEntriesRef = useRef([]) // ref para evitar stale closure no handleSearch
+  const customEntriesRef = useRef([])
 
-  const { data: allKeys }                       = useKeyData('')
-  const { data: searchResult, loading, error }  = useKeyData(activePath || '__none__')
+  const { data: allKeys }                      = useKeyData('')
+  const { data: searchResult, loading, error } = useKeyData(activePath || '__none__')
 
   const existingIds = allKeys
     ? [...allKeys.letters, ...allKeys.numbers, ...allKeys.specials].map(k => k.id)
@@ -356,17 +322,22 @@ export default function App() {
 
   function handleSearch() {
     const path = searchInput.startsWith('/') ? searchInput : '/' + searchInput
-    setActivePath(path)
-    setSelectedKey(null)
-    // verifica se é busca por ID numérico e tenta achar entrada custom
+    setActivePath(path); setSelectedKey(null)
     const idMatch = path.match(/^\/(\d+)$/)
     setCustomResult(idMatch ? (customEntriesRef.current.find(e => e.id === parseInt(idMatch[1])) || null) : null)
   }
 
   function handleKeyClick(k) {
-    setSelectedKey(k); setCustomResult(null)
+    setSelectedKey(k)
     const path = `/name/${k.name}`
     setSearchInput(path); setActivePath(path)
+    const matches = customEntriesRef.current.filter(e =>
+      e.letters.some(l =>
+        l.toLowerCase() === k.name.toLowerCase() ||
+        (k.alter && l.toLowerCase() === k.alter.toLowerCase())
+      )
+    )
+    setCustomResult(matches.length > 0 ? matches : null)
   }
 
   function handleCreated(entry) {
@@ -384,65 +355,57 @@ export default function App() {
   return (
     <>
       <GlobalStyle />
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 28, padding: '40px 20px',
-      }}>
+      <div className="min-h-screen bg-[#0a0c10] text-[#c8d6f0] flex flex-col items-center justify-center gap-7 px-5 py-10"
+           style={{ fontFamily: "'Rajdhani', sans-serif" }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: 28, letterSpacing: 6, color: 'var(--accent)', textShadow: '0 0 20px var(--accent)', textTransform: 'uppercase' }}>
+        <div className="text-center">
+          <h1 className="font-mono text-3xl tracking-[6px] text-[#00ffe0] uppercase"
+              style={{ textShadow: '0 0 20px #00ffe0', fontFamily: "'Share Tech Mono', monospace" }}>
             KB_MAP
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: 13, letterSpacing: 2, marginTop: 4 }}>KEYBOARD MAPPING API</p>
+          <p className="text-[#4a556e] text-[13px] tracking-[3px] mt-1">KEYBOARD MAPPING API</p>
         </div>
 
         {/* Barra de busca */}
         <SearchBar value={searchInput} onChange={setSearchInput} onSearch={handleSearch} inputRef={searchInputRef} />
 
-        {/* Resultados lado a lado */}
+        {/* Resultados */}
         {activePath && activePath !== '/__none__' && (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 720 }}>
-            {loading && <p style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>buscando...</p>}
+          <div className="flex gap-4 flex-wrap justify-center w-full max-w-2xl">
+            {loading && <p className="text-[#4a556e] font-mono text-xs">buscando...</p>}
             {error && !customResult && (
-              <p style={{ color: 'var(--accent2)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>erro {error} — rota não encontrada</p>
+              <p className="text-[#ff4fd8] font-mono text-xs">erro {error} — rota não encontrada</p>
             )}
-            {apiResult   && <KeyInfo data={apiResult}    label="api"    color="var(--accent)"  />}
-            {customResult && <KeyInfo data={customResult} label="custom" color="var(--accent3)" />}
+            {apiResult && <KeyInfo data={apiResult} label="api" accent="cyan" />}
+            {customResult && (Array.isArray(customResult) ? customResult : [customResult]).map((cr, i) => (
+              <KeyInfo key={i} data={cr} label={`custom #${cr.id}`} accent="yellow" />
+            ))}
           </div>
         )}
 
         {/* Teclado virtual */}
         {allKeys && (
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '28px 32px', boxShadow: '0 0 40px rgba(0,255,224,.04)' }}>
+          <div className="bg-[#111318] border border-[#1e2230] rounded-2xl px-8 py-7 shadow-[0_0_40px_rgba(0,255,224,0.04)]">
             <KeyboardLayout allKeys={allKeys} highlight={highlightKey} onKeyClick={handleKeyClick} />
           </div>
         )}
 
-        {/* Formulário de criação */}
+        {/* Formulário */}
         <CreateForm existingIds={existingIds} onCreated={handleCreated} />
 
-        {/* Entradas customizadas salvas */}
+        {/* Entradas salvas */}
         {customEntries.length > 0 && (
-          <div style={{ width: '100%', maxWidth: 520 }}>
-            <div style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: 3, marginBottom: 10, textTransform: 'uppercase' }}>
+          <div className="w-full max-w-xl">
+            <div className="text-[#4a556e] font-mono text-[10px] tracking-[3px] uppercase mb-2.5">
               entradas salvas localmente
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="flex gap-2 flex-wrap">
               {customEntries.map(e => (
-                <span key={e.id}
-                  onClick={() => {
-                    const path = `/${e.id}`
-                    setSearchInput(path); setActivePath(path); setCustomResult(e); setSelectedKey(null)
-                  }}
-                  style={{
-                    background: '#ffe06611', border: '1px solid #ffe06644',
-                    borderRadius: 6, padding: '4px 12px', cursor: 'pointer',
-                    fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent3)',
-                    transition: 'background .15s',
-                  }}
-                  onMouseEnter={ev => ev.currentTarget.style.background = '#ffe06622'}
-                  onMouseLeave={ev => ev.currentTarget.style.background = '#ffe06611'}
+                <span
+                  key={e.id}
+                  onClick={() => { const p = `/${e.id}`; setSearchInput(p); setActivePath(p); setCustomResult(e); setSelectedKey(null) }}
+                  className="bg-[#ffe06611] hover:bg-[#ffe06622] border border-[#ffe06644] rounded-md px-3 py-1 cursor-pointer font-mono text-[12px] text-[#ffe066] transition-colors"
                 >
                   #{e.id} [{e.letters.join(', ')}]
                 </span>
@@ -452,16 +415,16 @@ export default function App() {
         )}
 
         {/* Rodapé */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <p style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: physicalPressed ? 'var(--accent)' : 'var(--muted)', letterSpacing: 2, transition: 'color .2s' }}>
+        <div className="flex flex-col items-center gap-2.5">
+          <p className={`font-mono text-[11px] tracking-widest transition-colors duration-200 ${physicalPressed ? 'text-[#00ffe0]' : 'text-[#4a556e]'}`}>
             {physicalPressed ? `[ ${physicalPressed} ] detectada` : '— pressione qualquer tecla do teclado —'}
           </p>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)' }}>
+          <div className="flex gap-4 flex-wrap justify-center font-mono text-[11px] text-[#4a556e]">
             {['/name/A', '/1', '/category/letters', '/category/numbers', '/category/specials', '/all'].map(r => (
-              <span key={r} onClick={() => { setSearchInput(r); setActivePath(r); setSelectedKey(null); setCustomResult(null) }}
-                style={{ cursor: 'pointer', transition: 'color .15s' }}
-                onMouseEnter={e => e.target.style.color = 'var(--accent)'}
-                onMouseLeave={e => e.target.style.color = 'var(--muted)'}
+              <span
+                key={r}
+                onClick={() => { setSearchInput(r); setActivePath(r); setSelectedKey(null); setCustomResult(null) }}
+                className="cursor-pointer hover:text-[#00ffe0] transition-colors"
               >{r}</span>
             ))}
           </div>
